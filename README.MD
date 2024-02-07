@@ -1,3 +1,9 @@
+0. Git config
+
+git config --global user.name "Byron Campo"
+git config --global user.email byron.campo@gmail.com
+
+
 1. Instalar Airflow
 
 export AIRFLOW_HOME=$pwd
