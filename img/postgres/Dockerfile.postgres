@@ -1,0 +1,3 @@
+FROM postgres:latest
+
+# Add any additional configuration or setup commands here
