@@ -40,10 +40,10 @@ En la interfaz web de Airflow, se crea una variable de entorno (Admin > Variable
 
 ```json
 {
-    "DB_USER": "rfhsduga",
-    "DB_PASSWORD": "oRy8GP3BJ36Gv3Ron_2shajiWK2mRhzO",
-    "DB_HOST": "baasu.db.elephantsql.com",
-    "DB_NAME": "rfhsduga"
+    "DB_USER": "******",
+    "DB_PASSWORD": "******",
+    "DB_HOST": "******",
+    "DB_NAME": "******"
 }
 ```
 - **Modelo Relacional**
