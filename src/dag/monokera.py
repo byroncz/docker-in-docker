@@ -6,20 +6,36 @@ from airflow.utils.task_group import TaskGroup
 from docker.types import Mount
 from airflow.models import Variable
 import json
-import os
 
 
 LOCAL_WORKING_DIRECTORY = '/workspaces/reto'
 WORKING_DIRECTORY = '/usr/src/app'
 
-config = json.loads(Variable.get("db_params"))
-
-
-ENVIRONMENT={
-    **config,
+DOCKER_OPERATOR_ARGS = {
+    'image':'processor:latest',
+    'api_version': 'auto',
+    'auto_remove': True,
+    'docker_url':"unix://var/run/docker.sock", 
+    'network_mode':"bridge",
+    'mounts':[
+        Mount(
+            source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/scripts', 
+            target=WORKING_DIRECTORY,
+            type='bind',
+        ),
+        Mount(
+            source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/data', 
+            target=f'{WORKING_DIRECTORY}/data',
+            type='bind',
+        )
+    ]    
 }
 
-loading_scripts = [
+CONTAINER_ENV_VARS={
+    **json.loads(Variable.get("db_params")),
+}
+
+LOADING_STEPS_SCRIPTS = [
     'agents.py',
     'claims.py',
     'insured.py',
@@ -27,7 +43,7 @@ loading_scripts = [
     'premium.py'
 ]
 
-default_args = {
+DEFAULT_DAG_ARGS = {
     'owner': 'airflow',
     'depends_on_past': False,
     'start_date': datetime(2024, 2, 1),
@@ -39,8 +55,8 @@ default_args = {
 
 with DAG(
     'monokera',
-    default_args=default_args,
-    description='Un DAG para cargar datos en paralelo usando DockerOperator',
+    default_args=DEFAULT_DAG_ARGS,
+    description='Reto Monokera',
     schedule_interval=None,
 ) as dag:
 
@@ -50,95 +66,31 @@ with DAG(
 
     cleaning = DockerOperator(
         task_id='cleaning',
-        image='processor:latest',
-        api_version='auto',
-        auto_remove=True,
         command=f"python {WORKING_DIRECTORY}/cleaning/cleaning.py",
-        docker_url="unix://var/run/docker.sock", 
-        network_mode="bridge",
-        mounts=[
-            Mount(
-                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/scripts', 
-                target=WORKING_DIRECTORY,
-                type='bind',
-            ),
-            Mount(
-                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/data', 
-                target=f'{WORKING_DIRECTORY}/data',
-                type='bind',
-            )
-        ]
+        **DOCKER_OPERATOR_ARGS,
     )
 
     loading_policy = DockerOperator(
         task_id='loading_policy',
-        image='processor:latest',
-        api_version='auto',
-        auto_remove=True,
         command=f"python {WORKING_DIRECTORY}/loading/policy.py",
-        docker_url="unix://var/run/docker.sock", 
-        network_mode="bridge",
-        mounts=[
-            Mount(
-                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/scripts', 
-                target=WORKING_DIRECTORY,
-                type='bind',
-            ),
-            Mount(
-                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/data', 
-                target=f'{WORKING_DIRECTORY}/data',
-                type='bind',
-            )
-        ],
-        environment=ENVIRONMENT
+        **DOCKER_OPERATOR_ARGS,
+        environment=CONTAINER_ENV_VARS
     )
 
     with TaskGroup("loading") as loading:
-            for script in loading_scripts:
+            for script in LOADING_STEPS_SCRIPTS:
                 current_task = DockerOperator(
                     task_id=f'{script[:-3]}', 
-                    image='processor:latest',
-                    api_version='auto',
-                    auto_remove=True,
                     command=f"python {WORKING_DIRECTORY}/loading/{script}",
-                    docker_url="unix://var/run/docker.sock",
-                    network_mode="bridge",
-                    mounts=[
-                        Mount(
-                            source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/scripts',
-                            target=WORKING_DIRECTORY,
-                            type='bind',
-                        ),
-                        Mount(
-                            source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/data',
-                            target=f'{WORKING_DIRECTORY}/data',
-                            type='bind',
-                        )
-                    ],
-                    environment=ENVIRONMENT
+                    **DOCKER_OPERATOR_ARGS,
+                    environment=CONTAINER_ENV_VARS
                 )
 
     reporting = DockerOperator(
         task_id='reporting',
-        image='processor:latest',
-        api_version='auto',
-        auto_remove=True,
         command=f"python {WORKING_DIRECTORY}/report/report.py", 
-        docker_url="unix://var/run/docker.sock", 
-        network_mode="bridge",
-        mounts=[
-            Mount(
-                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/scripts', 
-                target=WORKING_DIRECTORY,
-                type='bind',
-            ),
-            Mount(
-                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/data', 
-                target=f'{WORKING_DIRECTORY}/data',
-                type='bind',
-            )
-        ],
-        environment=ENVIRONMENT
+        **DOCKER_OPERATOR_ARGS,
+        environment=CONTAINER_ENV_VARS
     )
 
     end = DummyOperator(

@@ -1,29 +1,70 @@
-0. Git config
+# Guía de Implementación Airflow con Docker
+Esta guía proporciona instrucciones detalladas para configurar y ejecutar la solución al reto compartido.
 
-git config --global user.name "Byron Campo"
-git config --global user.email byron.campo@gmail.com
+## Configuración de Airflow
 
+### Instalación de Airflow:
+Se inicia instalando Airflow mediante Docker Compose siguiendo las instrucciones en la [documentación oficial de Airflow](https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html).
 
-1. Instalar Airflow
+### Ajustes en Docker Compose:
+Antes de lanzar Airflow, se recomiendan los siguientes ajustes en el archivo `docker-compose.yaml`:
 
-export AIRFLOW_HOME=$pwd
-pip install "apache-airflow[celery]==2.8.1" --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.8.1/constraints-3.8.txt"
-pip install apache-airflow-providers-docker==3.9.1
-pip install connexion[swagger-ui]==2.14.2
+- **Montajes de Volumen:**
+  Es crucial incluir `/var/run/docker.sock` para permitir la interacción de Airflow con el daemon de Docker. Se añade la siguiente línea en la sección de `volumes`:
+  ```bash
+  - /var/run/docker.sock:/var/run/docker.sock
+  ```
+- **Requisitos Adicionales:**
+Para integrar el proveedor de Docker en Airflow, se modifica la variable `_PIP_ADDITIONAL_REQUIREMENTS` a:
+```bash
+_PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-apache-airflow-providers-docker>=2.0.0}
+```
+- **Permisos de Docker Socket:**
+Se otorgan los permisos necesarios ejecutando:
 
-airflow db init
-airflow users  create --role Admin --username admin --email admin --firstname admin --lastname admin --password admin
+```bash
+sudo chmod 777 /var/run/docker.sock
+```
+- **Cargar Ejemplos (Opcional):**
+Para evitar cargar ejemplos de Airflow, se configura a:
 
-En un tab distinto correr:
-airflow webserver -p 8080
+```bash
+AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+```
 
-En otro tab correr:
-airflow scheduler
+### Configuración del Repositorio de Datos
+Se ha seleccionado PostgreSQL como solución de almacenamiento, utilizando una instancia en la nube a través de ElephantSQL.
 
-2. airflow db init
+- **Cadena de Conexión:**
+En la interfaz web de Airflow, se crea una variable de entorno (Admin > Variables) con la clave `db_params` y el valor JSON correspondiente, ajustando los parámetros a su configuración:
 
-Construir imagenes de Python y Postgres
+```json
+{
+    "DB_USER": "rfhsduga",
+    "DB_PASSWORD": "oRy8GP3BJ36Gv3Ron_2shajiWK2mRhzO",
+    "DB_HOST": "baasu.db.elephantsql.com",
+    "DB_NAME": "rfhsduga"
+}
+```
+- **Modelo Relacional**
+Para una vista detallada del modelo relacional y el DDL SQL correspondiente, se consulta el archivo `/src/scripts/postgres/ddl.sql`` en el repositorio.
 
-docker build -t python-image -f ./img/python/Dockerfile.python .
+![Modelo Relacional](relational_model.png)
 
-docker build -t postgres-image -f ./img/postgres/Dockerfile.postgres .
+### Ejecución
+Se siguen los siguientes pasos para ejecutar el flujo de trabajo:
+
+- **1. Clonar el Repositorio:**
+```bash
+git clone https://github.com/byroncz/monokera.git
+``````
+- **2. Construir el Entorno de Procesamiento:**
+Desde el directorio raíz del repositorio, se ejecuta:
+```bash
+docker build -t processor:latest -f ./img/Dockerfile.processor .
+```
+Este comando construye la imagen Docker que se utilizará para procesar los datos.
+
+- **3. Lanzar el DAG:**
+* Se copia el DAG `/dag/monokera.py al directorio de DAGs en la instalación de Airflow.
+* Se accede al servidor web de Airflow, se inicia sesión y se activa la ejecución del DAG monokera.
