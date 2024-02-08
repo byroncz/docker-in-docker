@@ -6,7 +6,7 @@ from airflow.utils.task_group import TaskGroup
 from docker.types import Mount
 
 
-LOCAL_WORKING_DIRECTORY = '/workspaces/docker-in-docker-2'
+LOCAL_WORKING_DIRECTORY = '/workspaces/reto'
 WORKING_DIRECTORY = '/usr/src/app'
 loading_scripts = [
     'agents.py',
@@ -26,20 +26,12 @@ default_args = {
     'retry_delay': timedelta(minutes=3600),
 }
 
-# dag = DAG(
-#     'monokera_reto',
-#     default_args=default_args,
-#     description='A simple test DAG',
-#     schedule_interval=timedelta(days=1),
-# )
-
 with DAG(
-    'monokera_reto',
+    'monokera',
     default_args=default_args,
     description='Un DAG para cargar datos en paralelo usando DockerOperator',
     schedule_interval=None,
 ) as dag:
-
 
     start = DummyOperator(
         task_id='start',
@@ -112,7 +104,6 @@ with DAG(
                         )
                     ]
                 )
-
 
     end = DummyOperator(
         task_id='end'

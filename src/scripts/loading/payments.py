@@ -1,9 +1,16 @@
 import pandas as pd
 from sqlalchemy import create_engine
+import os
 
 
 WORKING_DIRECTORY = '/usr/src/app'
-DATABASE_URI = 'postgresql://rfhsduga:oRy8GP3BJ36Gv3Ron_2shajiWK2mRhzO@baasu.db.elephantsql.com/rfhsduga'
+
+db_user = os.environ.get('DB_USER')
+db_password = os.environ.get('DB_PASSWORD')
+db_host = os.environ.get('DB_HOST')
+db_name = os.environ.get('DB_NAME')
+
+DATABASE_URI = f"postgresql://{db_user}:{db_password}@{db_host}/{db_name}"
 ENGINE = create_engine(DATABASE_URI)
 
 

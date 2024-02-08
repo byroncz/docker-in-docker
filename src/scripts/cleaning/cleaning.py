@@ -4,6 +4,8 @@ import os
 
 
 WORKING_DIRECTORY = '/usr/src/app'
+RAW_DATA_PATH = os.path.join(WORKING_DIRECTORY, 'data', 'MOCK_DATA.csv')
+CLEANED_DATA_PATH = os.path.join(WORKING_DIRECTORY, 'data', 'cleaned.parquet')
 
 
 def clean_data(file_path: str) -> pd.DataFrame:
@@ -46,10 +48,8 @@ def clean_data(file_path: str) -> pd.DataFrame:
 
 if __name__ == '__main__':
     print('Cleaning data...')
-    raw_data_path = os.path.join(WORKING_DIRECTORY, 'data', 'MOCK_DATA.csv')
-    cleaned_data_path = os.path.join(WORKING_DIRECTORY, 'data', 'cleaned.parquet')
 
-    cleaned_data_df = clean_data(raw_data_path)
-    cleaned_data_df.to_parquet(cleaned_data_path)
+    cleaned_data_df = clean_data(RAW_DATA_PATH)
+    cleaned_data_df.to_parquet(CLEANED_DATA_PATH)
     
     print(cleaned_data_df.head())
