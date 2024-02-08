@@ -4,10 +4,21 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.utils.task_group import TaskGroup
 from docker.types import Mount
+from airflow.models import Variable
+import json
+import os
 
 
 LOCAL_WORKING_DIRECTORY = '/workspaces/reto'
 WORKING_DIRECTORY = '/usr/src/app'
+
+config = json.loads(Variable.get("db_params"))
+
+
+ENVIRONMENT={
+    **config,
+}
+
 loading_scripts = [
     'agents.py',
     'claims.py',
@@ -78,7 +89,8 @@ with DAG(
                 target=f'{WORKING_DIRECTORY}/data',
                 type='bind',
             )
-        ]
+        ],
+        environment=ENVIRONMENT
     )
 
     with TaskGroup("loading") as loading:
@@ -102,11 +114,35 @@ with DAG(
                             target=f'{WORKING_DIRECTORY}/data',
                             type='bind',
                         )
-                    ]
+                    ],
+                    environment=ENVIRONMENT
                 )
+
+    reporting = DockerOperator(
+        task_id='reporting',
+        image='processor:latest',
+        api_version='auto',
+        auto_remove=True,
+        command=f"python {WORKING_DIRECTORY}/report/report.py", 
+        docker_url="unix://var/run/docker.sock", 
+        network_mode="bridge",
+        mounts=[
+            Mount(
+                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/scripts', 
+                target=WORKING_DIRECTORY,
+                type='bind',
+            ),
+            Mount(
+                source=f'{LOCAL_WORKING_DIRECTORY}/monokera/src/data', 
+                target=f'{WORKING_DIRECTORY}/data',
+                type='bind',
+            )
+        ],
+        environment=ENVIRONMENT
+    )
 
     end = DummyOperator(
         task_id='end'
     )
 
-start >> cleaning >> loading_policy >> loading >> end
+start >> cleaning >> loading_policy >> loading >> reporting >> end
