@@ -55,9 +55,9 @@ Para una vista detallada del modelo relacional y el DDL SQL correspondiente, se 
 Se siguen los siguientes pasos para ejecutar el flujo de trabajo:
 
 - **1. Clonar el Repositorio:**
-```bash
-git clone https://github.com/byroncz/monokera.git
-``````
+  ```bash
+  git clone https://github.com/byroncz/monokera.git
+  ```
 - **2. Construir el Entorno de Procesamiento:**
 Desde el directorio raíz del repositorio, se ejecuta:
 ```bash
